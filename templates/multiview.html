@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>a_MultiView</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="page-container">
+        <header>
+            <h1>a_MultiView</h1>
+            <div class="header-controls">
+                <div class="grid-controls">
+                    <button class="layout-button active" onclick="setGridLayout(2)">2x2</button>
+                    <button class="layout-button" onclick="setGridLayout(4)">4x4</button>
+                </div>
+                <input type="file"
+                       id="csvFileInput"
+                       accept=".csv"
+                       style="display: none;"
+                       onchange="handleFileUpload(event)">
+                <button class="load-button" onclick="document.getElementById('csvFileInput').click()">
+                    LOAD CONFIG
+                </button>
+            </div>
+        </header>
+        <div class="grid-container grid-4x4" id="grid-container">
+            <!-- Grid boxes will be added by JavaScript -->
+        </div>
+
+        <!-- Stream URL Dialog -->
+        <dialog id="streamDialog" class="stream-dialog">
+            <form method="dialog">
+                <h3>Configure Stream</h3>
+                <div class="dialog-content">
+                    <div class="input-group">
+                        <label for="streamNameInput">Stream Name</label>
+                        <input type="text" id="streamNameInput" placeholder="Enter stream name">
+                    </div>
+                    <div class="input-group">
+                        <label for="streamUrlInput">Stream URL</label>
+                        <input type="text" id="streamUrlInput" placeholder="Enter stream URL">
+                    </div>
+                    <div class="dialog-buttons">
+                        <button type="submit" class="load-button">Start</button>
+                        <button type="button" class="load-button" id="cancelStreamButton">Cancel</button>
+                    </div>
+                </div>
+            </form>
+        </dialog>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="{{ url_for('static', filename='multiview.js') }}"></script>
+    <script>
+        // Initialize the UI when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeUI();
+        });
+    </script>
+</body>
+</html>
