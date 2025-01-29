@@ -36,47 +36,58 @@ header {
     gap: 16px;
 }
 
-.grid-controls {
+.grid-controls, .preset-controls {
     display: flex;
-    gap: 8px;
+    gap: 10px;
+}
+
+/* Common button styles */
+.layout-button,
+.load-button,
+.preset-controls button,
+.grid-controls button {
+    background-color: transparent;
+    border: 1px solid #ccc;
+    color: #ccc;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9em;
+}
+
+.layout-button:hover,
+.load-button:hover,
+.preset-controls button:hover,
+.grid-controls button:hover {
+    background: linear-gradient(to bottom, #e6e6e6 0%, #d4d4d4 100%);
+    border-color: #666;
+}
+
+.layout-button:active,
+.load-button:active,
+.preset-controls button:active,
+.grid-controls button:active {
+    background: #d4d4d4;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.layout-button.active {
+    background: linear-gradient(to bottom, #0088cc 0%, #0044cc 100%);
+    border-color: #0044cc;
+    color: white;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.grid-controls button.active {
+    background-color: #007bff;
+    color: white;
+    border-color: #0056b3;
 }
 
 header h1 {
     font-size: 1.2em;
     margin: 0;
     color: #ccc;
-}
-
-.load-button {
-    background-color: transparent;
-    border: 1px solid #ccc;
-    color: #ccc;
-    padding: 4px 12px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.9em;
-}
-
-.load-button:hover {
-    background-color: rgba(100, 255, 218, 0.1);
-}
-
-.layout-button {
-    background-color: transparent;
-    border: 1px solid #ccc;
-    color: #ccc;
-    padding: 4px 12px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.9em;
-}
-
-.layout-button:hover {
-    background-color: rgba(204, 204, 204, 0.1);
-}
-
-.layout-button.active {
-    background-color: rgba(204, 204, 204, 0.2);
 }
 
 .grid-container {
@@ -148,6 +159,29 @@ header h1 {
     width: 100%;
     height: 100%;
     object-fit: contain;
+}
+
+.play-overlay-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.7);
+    border: none;
+    color: white;
+    font-size: 48px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.play-overlay-button:hover {
+    background: rgba(0, 0, 0, 0.9);
 }
 
 /* Stream name overlay */
@@ -230,4 +264,11 @@ dialog.stream-dialog::backdrop {
 .dialog-buttons .load-button {
     margin: 0;
     min-width: 80px;
+}
+
+.error-message {
+    color: #ff6b6b;
+    text-align: center;
+    padding: 20px;
+    font-size: 0.9em;
 }
