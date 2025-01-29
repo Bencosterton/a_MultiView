@@ -1,0 +1,17 @@
+Name,Stream URL
+IITV Youbtube,https://www.youtube.com/watch?v=jFBd2jJpyJ8
+IITV DRTY,https://dev-live.livetvstream.co.uk/LS-63503-4/index.m3u8
+AITV DRTY,https://hls.afintl.com/hls/stream.m3u8
+Al Jazeera English,https://d1cy85syyhvqz5.cloudfront.net/v1/master/7b67fbda7ab859400a821e9aa0deda20ab7ca3d2/aljazeeraLive/AJE/index.m3u8
+BBC News,https://vs-cmaf-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/iptv_hd_abr_v1.mpd
+OMID IRAN,https://oitnhls.wns.live/hls/stream.m3u8
+CGTN,https://english-livebkws.cgtn.com/live/encgtn.m3u8
+EuroNews,https://rakuten-euronews-10-be.samsung.wurl.tv/playlist.m3u8
+Sky News Persian,https://stream.skynewsarabia.com/hls/sna.m3u8
+Persiana Music,https://musichls.persiana.live/hls/stream.m3u8
+TRT World,https://tv-trtworld.medya.trt.com.tr/master.m3u8
+Voice of America - Persian,https://voa-ingest.akamaized.net/hls/live/2033876/tvmc07/playlist.m3u8
+NHK World,https://nhkwlive-ojp.akamaized.net/hls/live/2003459/nhkwlive-ojp-en/index.m3u8
+Russia Today,https://cdn-01.bonus-tv.ru/RussiaToday/playlist.m3u8
+Al Arabiya,https://live.alarabiya.net/alarabiapublish/alarabiya.smil/playlist.m3u8
+Press TV,https://live.presstv.ir/hls/presstv.m3u8
