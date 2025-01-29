@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>a_MultiView</title>
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+<!-- Engineering Team! -->
+<!-- Stop looking here, there is nothing or you here -->
+<!-- Go back to work and leave my stuff alone -->
 </head>
 <body>
     <div class="page-container">
@@ -15,14 +18,21 @@
                     <button class="layout-button active" onclick="setGridLayout(2)">2x2</button>
                     <button class="layout-button" onclick="setGridLayout(4)">4x4</button>
                 </div>
-                <input type="file"
-                       id="csvFileInput"
-                       accept=".csv"
-                       style="display: none;"
-                       onchange="handleFileUpload(event)">
-                <button class="load-button" onclick="document.getElementById('csvFileInput').click()">
-                    LOAD CONFIG
-                </button>
+                <div class="preset-controls">
+                    <button class="load-button" onclick="loadPreset('Streaming')">Streaming</button>
+                    <button class="load-button" onclick="loadPreset('Volant')">preset2</button>
+                    <button class="load-button" onclick="loadPreset('news')">news</button>
+                </div>
+                <div class="file-controls">
+                    <input type="file" 
+                           id="csvFileInput" 
+                           accept=".csv" 
+                           style="display: none;" 
+                           onchange="handleFileSelect(event)">
+                    <button class="load-button" onclick="document.getElementById('csvFileInput').click()">
+                        LOAD CONFIG
+                    </button>
+                </div>
             </div>
         </header>
         <div class="grid-container grid-4x4" id="grid-container">
@@ -58,6 +68,16 @@
         document.addEventListener('DOMContentLoaded', function() {
             initializeUI();
         });
+    </script>
+    <script>
+        // Pass preset name from Flask to JavaScript
+        const initialPreset = "{{ preset_name or '' }}";
+        if (initialPreset) {
+            // Load preset after page is fully loaded
+            document.addEventListener('DOMContentLoaded', () => {
+                loadPreset(initialPreset);
+            });
+        }
     </script>
 </body>
 </html>
