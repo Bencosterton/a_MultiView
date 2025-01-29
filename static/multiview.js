@@ -42,7 +42,7 @@ function setGridLayout(size) {
             </div>
         `;
         
-        // Add click handler to show dialog
+        // open the dialogue box
         streamBox.addEventListener('click', (e) => {
             e.preventDefault();
             showStreamDialog(i);
@@ -70,7 +70,7 @@ function setupDialogHandlers() {
         }
     });
 
-    // Handle dialog cancellation
+    // Close the window if you press cancle
     cancelButton.addEventListener('click', () => {
         dialog.close();
     });
@@ -117,100 +117,136 @@ function extractYouTubeId(url) {
     return null;
 }
 
-function initializeStream(streamId, url, streamName) {
+function initializeStream(streamId, url, name = '') {
     const container = document.getElementById(`${streamId}-container`);
-    
-    // Remove placeholder class if it exists
-    container.classList.remove('placeholder');
-    
-    // Clear container
+    if (!container) return;
+
+    // Clean up existing player if any
+    if (streamPlayers[streamId]) {
+        streamPlayers[streamId].destroy();
+        delete streamPlayers[streamId];
+    }
+
     container.innerHTML = '';
-    
-    // Add stream name overlay if provided
-    if (streamName) {
+    container.classList.remove('placeholder');
+
+    // Create video element
+    const video = document.createElement('video');
+    video.id = streamId;
+    video.controls = true;
+    video.autoplay = true;
+    video.muted = true; // mute the videos by default
+    container.appendChild(video);
+
+    // Add name overlay if provided
+    if (name) {
         const nameOverlay = document.createElement('div');
         nameOverlay.className = 'stream-name-overlay';
-        nameOverlay.textContent = streamName;
+        nameOverlay.textContent = name;
         container.appendChild(nameOverlay);
     }
 
-    try {
-        // Check if it's a YouTube URL
-        const youtubeId = extractYouTubeId(url);
-        
-        if (youtubeId) {
-            // Create YouTube iframe
-            const iframe = document.createElement('iframe');
-            iframe.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1`;
-            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-            iframe.allowFullscreen = true;
-            iframe.style.width = '100%';
-            iframe.style.height = '100%';
-            iframe.style.border = '0';
-            container.appendChild(iframe);
-        } else if (Hls.isSupported()) {
-            // Handle HLS streams
-            if (streamPlayers[streamId]) {
-                streamPlayers[streamId].destroy();
+    // Initialize HLS
+    if (Hls.isSupported()) {
+        const hls = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true
+        });
+
+        hls.loadSource(url);
+        hls.attachMedia(video);
+        streamPlayers[streamId] = hls;
+
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            video.play().catch(function(error) {
+                console.log("Play prevented by browser, waiting for user interaction");
+                // Chrome won't play videos before browser load, so this is here to hopefully auto play the videos from a preset URL
+                const playButton = document.createElement('button');
+                playButton.className = 'play-overlay-button';
+                playButton.innerHTML = '▶';
+                playButton.onclick = function() {
+                    video.play();
+                    playButton.remove();
+                };
+                container.appendChild(playButton);
+            });
+        });
+
+        // handle all the errors
+        hls.on(Hls.Events.ERROR, function(event, data) {
+            if (data.fatal) {
+                switch (data.type) {
+                    case Hls.ErrorTypes.NETWORK_ERROR:
+                        hls.startLoad();
+                        break;
+                    case Hls.ErrorTypes.MEDIA_ERROR:
+                        hls.recoverMediaError();
+                        break;
+                    default:
+                        stopStream(streamId);
+                        break;
+                }
             }
-
-            const hls = new Hls();
-            streamPlayers[streamId] = hls;
-
-            // Create video element
-            const video = document.createElement('video');
-            video.controls = true;
-            container.appendChild(video);
-
-            // Load stream
-            hls.loadSource(url);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                video.play().catch(e => console.error('Error playing video:', e));
-            });
-
-            // Error handling
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                console.error('HLS error:', data);
-            });
-        } else {
-            console.error('HLS not supported and not a YouTube URL');
-        }
-    } catch (error) {
-        console.error('Error initializing stream:', error);
+        });
     }
 }
 
 function stopStream(streamId) {
     const container = document.getElementById(`${streamId}-container`);
     
-    // Clean up HLS instance if exists
+    // Clean up the HLS
     if (streamPlayers[streamId]) {
         streamPlayers[streamId].destroy();
         delete streamPlayers[streamId];
     }
     
-    // Clear container and reset to placeholder
-    container.innerHTML = '';
-    container.classList.add('placeholder');
+    // Clear container and reset
+    if (container) {
+        container.innerHTML = '';
+        container.classList.add('placeholder');
+    }
 }
 
-function handleFileUpload(event) {
+async function handleFileSelect(event) {
     const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const text = e.target.result;
-                const streams = parseCSV(text);
-                loadStreamsConfig(streams);
-                showNotification('Configuration loaded successfully');
-            } catch (error) {
-                showNotification('Error loading configuration file', true);
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        const rows = text.split('\n');
+        
+        // Clear existing streams
+        clearAllStreams();
+        
+        // Process each line including empty ones
+        const maxStreams = getCurrentGridSize() * getCurrentGridSize();
+        for (let i = 0; i < maxStreams; i++) {
+            const streamId = `stream${i + 1}`;
+            
+            // Get row
+            const row = rows[i + 1] ? rows[i + 1].trim() : '';
+            if (row) {
+                const [name, url] = row.split(',').map(s => s.trim());
+                if (url) {
+                    initializeStream(streamId, url, name);
+                    continue;
+                }
             }
-        };
-        reader.readAsText(file);
+            
+            // Stop stream if no URL in the line in the file...
+            stopStream(streamId);
+        }
+    } catch (error) {
+        console.error('Error reading CSV file:', error);
     }
+    
+    // Reset file input
+    event.target.value = '';
+}
+
+function getCurrentGridSize() {
+    const container = document.getElementById('grid-container');
+    return container.classList.contains('grid-2x2') ? 2 : 4;
 }
 
 function parseCSV(text) {
@@ -218,26 +254,26 @@ function parseCSV(text) {
     const streams = [];
     let streamIndex = 1;
     
-    // Skip empty lines and comments
+    // Skip empty lines
     for (const line of lines) {
         const trimmedLine = line.trim();
         if (!trimmedLine || trimmedLine.startsWith('#')) {
             continue;
         }
         
-        // Skip the header line
+        // Skip the header
         if (trimmedLine.toLowerCase().startsWith('name,') || 
             trimmedLine.toLowerCase().includes('link')) {
             continue;
         }
         
-        // Parse the line
+        // parse parse parse
         const [name, url] = trimmedLine.split(',').map(item => item.trim());
         if (url && streamIndex <= currentGridSize * currentGridSize) {
             streams.push({ 
                 index: `stream${streamIndex}`, 
                 url: url,
-                name: name // Store the name for future use if needed
+                name: name // Store name
             });
             streamIndex++;
         }
@@ -254,7 +290,6 @@ function loadStreamsConfig(streams) {
     
     // Load new configuration
     for (const stream of streams) {
-        // Add a small delay between starting streams to prevent overwhelming the browser
         setTimeout(() => {
             initializeStream(stream.index, stream.url, stream.name);
         }, streams.indexOf(stream) * 500);
@@ -291,8 +326,79 @@ function downloadConfig() {
 }
 
 function showNotification(message, isError = false) {
-    console.log(message); // For now, just log to console
-    // You can implement a proper notification UI if needed
+    console.log(message);
+}
+
+async function loadPreset(presetName) {
+    try {
+        const response = await fetch(`/api/preset/${presetName}`);
+        if (!response.ok) {
+            throw new Error('Failed to load preset');
+        }
+        
+        const data = await response.json();
+        if (!data.streams) {
+            throw new Error('Invalid preset data');
+        }
+        
+        // Clear existing streams
+        clearAllStreams();
+        
+        // Load new streams
+        const maxStreams = getCurrentGridSize() * getCurrentGridSize();
+        for (let i = 0; i < maxStreams; i++) {
+            const streamId = `stream${i + 1}`;
+            const stream = data.streams[i] || { name: '', url: '' };
+            
+            if (stream.url && stream.url.trim()) {
+                initializeStream(streamId, stream.url, stream.name);
+            } else {
+                stopStream(streamId);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading preset:', error);
+    }
+}
+
+async function saveCurrentAsPreset(presetName) {
+    try {
+        // Collect current stream configurations
+        const streams = [];
+        const containers = document.querySelectorAll('.stream-container');
+        containers.forEach(container => {
+            const streamId = container.id.replace('-container', '');
+            const nameOverlay = container.querySelector('.stream-name-overlay');
+            const name = nameOverlay ? nameOverlay.textContent : '';
+            const player = streamPlayers[streamId];
+            const url = player ? player.url : '';
+            
+            streams.push({ name, url });
+        });
+        
+        // Save to server
+        const response = await fetch(`/api/preset/${presetName}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ streams })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to save preset');
+        }
+    } catch (error) {
+        console.error('Error saving preset:', error);
+    }
+}
+
+function clearAllStreams() {
+    const containers = document.querySelectorAll('.stream-container');
+    containers.forEach(container => {
+        const streamId = container.id.replace('-container', '');
+        stopStream(streamId);
+    });
 }
 
 // Initialize UI when the page loads
