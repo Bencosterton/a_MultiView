@@ -13,7 +13,7 @@ function setGridLayout(size) {
     const grid = document.querySelector('.grid-container');
     
     // Update grid class
-    grid.classList.remove('grid-2x2', 'grid-4x4');
+    grid.classList.remove('grid-2x2', 'grid-3x3', 'grid-4x4');
     grid.classList.add(`grid-${size}x${size}`);
     
     // Update button states
@@ -42,7 +42,7 @@ function setGridLayout(size) {
             </div>
         `;
         
-        // open the dialogue box
+        // Add click handler to show dialog
         streamBox.addEventListener('click', (e) => {
             e.preventDefault();
             showStreamDialog(i);
@@ -70,7 +70,7 @@ function setupDialogHandlers() {
         }
     });
 
-    // Close the window if you press cancle
+    // Handle dialog cancellation
     cancelButton.addEventListener('click', () => {
         dialog.close();
     });
@@ -123,20 +123,14 @@ function initializeStream(streamId, url, name = '') {
 
     // Clean up existing player if any
     if (streamPlayers[streamId]) {
-        streamPlayers[streamId].destroy();
+        if (streamPlayers[streamId].destroy) {
+            streamPlayers[streamId].destroy();
+        }
         delete streamPlayers[streamId];
     }
 
     container.innerHTML = '';
     container.classList.remove('placeholder');
-
-    // Create video element
-    const video = document.createElement('video');
-    video.id = streamId;
-    video.controls = true;
-    video.autoplay = true;
-    video.muted = true; // mute the videos by default
-    container.appendChild(video);
 
     // Add name overlay if provided
     if (name) {
@@ -145,6 +139,59 @@ function initializeStream(streamId, url, name = '') {
         nameOverlay.textContent = name;
         container.appendChild(nameOverlay);
     }
+
+    // Check if it's a YouTube URL
+    const youtubeId = extractYouTubeId(url);
+    if (youtubeId) {
+        // Create a div for the YouTube player
+        const youtubeContainer = document.createElement('div');
+        youtubeContainer.id = `youtube-${streamId}`;
+        youtubeContainer.style.width = '100%';
+        youtubeContainer.style.height = '100%';
+        container.appendChild(youtubeContainer);
+        
+        // Initialize YouTube player
+        if (typeof YT !== 'undefined' && YT.Player) {
+            createYouTubePlayer(youtubeId, `youtube-${streamId}`, streamId);
+        } else {
+            // Load YouTube API if not already loaded
+            if (!document.getElementById('youtube-api')) {
+                const tag = document.createElement('script');
+                tag.id = 'youtube-api';
+                tag.src = 'https://www.youtube.com/iframe_api';
+                const firstScriptTag = document.getElementsByTagName('script')[0];
+                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+                
+                // Define callback for when API is ready
+                window.onYouTubeIframeAPIReady = function() {
+                    // Create players for all pending YouTube streams
+                    document.querySelectorAll('[id^="youtube-"]').forEach(element => {
+                        const elementId = element.id;
+                        const streamIdMatch = elementId.match(/youtube-stream(\d+)/);
+                        if (streamIdMatch) {
+                            const pendingStreamId = `stream${streamIdMatch[1]}`;
+                            const pendingYoutubeId = element.getAttribute('data-youtube-id');
+                            if (pendingYoutubeId) {
+                                createYouTubePlayer(pendingYoutubeId, elementId, pendingStreamId);
+                            }
+                        }
+                    });
+                };
+            }
+            
+            // Mark this container as waiting for API
+            youtubeContainer.setAttribute('data-youtube-id', youtubeId);
+        }
+        return;
+    }
+
+    // Create video element for HLS
+    const video = document.createElement('video');
+    video.id = streamId;
+    video.controls = true;
+    video.autoplay = true;
+    video.muted = true; // Mute by default to allow autoplay
+    container.appendChild(video);
 
     // Initialize HLS
     if (Hls.isSupported()) {
@@ -160,7 +207,7 @@ function initializeStream(streamId, url, name = '') {
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
             video.play().catch(function(error) {
                 console.log("Play prevented by browser, waiting for user interaction");
-                // Chrome won't play videos before browser load, so this is here to hopefully auto play the videos from a preset URL
+                // Add play button overlay if autoplay fails
                 const playButton = document.createElement('button');
                 playButton.className = 'play-overlay-button';
                 playButton.innerHTML = '▶';
@@ -172,7 +219,7 @@ function initializeStream(streamId, url, name = '') {
             });
         });
 
-        // handle all the errors
+        // Add error handling
         hls.on(Hls.Events.ERROR, function(event, data) {
             if (data.fatal) {
                 switch (data.type) {
@@ -191,20 +238,53 @@ function initializeStream(streamId, url, name = '') {
     }
 }
 
+// Function to create YouTube player
+function createYouTubePlayer(youtubeId, containerId, streamId) {
+    const player = new YT.Player(containerId, {
+        videoId: youtubeId,
+        playerVars: {
+            'autoplay': 1,
+            'mute': 1,
+            'controls': 1,
+            'rel': 0,
+            'modestbranding': 1
+        },
+        events: {
+            'onReady': onPlayerReady,
+            'onError': onPlayerError
+        }
+    });
+    
+    streamPlayers[streamId] = player;
+    
+    function onPlayerReady(event) {
+        event.target.playVideo();
+    }
+    
+    function onPlayerError(event) {
+        console.error('YouTube player error:', event);
+    }
+}
+
 function stopStream(streamId) {
     const container = document.getElementById(`${streamId}-container`);
-    
-    // Clean up the HLS
+    if (!container) return;
+
+    // Clean up player instance if exists
     if (streamPlayers[streamId]) {
-        streamPlayers[streamId].destroy();
+        if (streamPlayers[streamId].destroy) {
+            // HLS player
+            streamPlayers[streamId].destroy();
+        } else if (streamPlayers[streamId].stopVideo) {
+            // YouTube player
+            streamPlayers[streamId].stopVideo();
+        }
         delete streamPlayers[streamId];
     }
-    
-    // Clear container and reset
-    if (container) {
-        container.innerHTML = '';
-        container.classList.add('placeholder');
-    }
+
+    // Reset container to placeholder state
+    container.innerHTML = '';
+    container.classList.add('placeholder');
 }
 
 async function handleFileSelect(event) {
@@ -223,7 +303,7 @@ async function handleFileSelect(event) {
         for (let i = 0; i < maxStreams; i++) {
             const streamId = `stream${i + 1}`;
             
-            // Get row
+            // Get row data if available (skip header row)
             const row = rows[i + 1] ? rows[i + 1].trim() : '';
             if (row) {
                 const [name, url] = row.split(',').map(s => s.trim());
@@ -233,7 +313,7 @@ async function handleFileSelect(event) {
                 }
             }
             
-            // Stop stream if no URL in the line in the file...
+            // Stop stream if no valid URL
             stopStream(streamId);
         }
     } catch (error) {
@@ -246,7 +326,10 @@ async function handleFileSelect(event) {
 
 function getCurrentGridSize() {
     const container = document.getElementById('grid-container');
-    return container.classList.contains('grid-2x2') ? 2 : 4;
+    if (container.classList.contains('grid-2x2')) return 2;
+    if (container.classList.contains('grid-3x3')) return 3;
+    if (container.classList.contains('grid-4x4')) return 4;
+    return 2; // Default to 2x2
 }
 
 function parseCSV(text) {
@@ -254,26 +337,26 @@ function parseCSV(text) {
     const streams = [];
     let streamIndex = 1;
     
-    // Skip empty lines
+    // Skip empty lines and comments
     for (const line of lines) {
         const trimmedLine = line.trim();
         if (!trimmedLine || trimmedLine.startsWith('#')) {
             continue;
         }
         
-        // Skip the header
+        // Skip the header line
         if (trimmedLine.toLowerCase().startsWith('name,') || 
             trimmedLine.toLowerCase().includes('link')) {
             continue;
         }
         
-        // parse parse parse
+        // Parse the line
         const [name, url] = trimmedLine.split(',').map(item => item.trim());
         if (url && streamIndex <= currentGridSize * currentGridSize) {
             streams.push({ 
                 index: `stream${streamIndex}`, 
                 url: url,
-                name: name // Store name
+                name: name // Store the name for future use if needed
             });
             streamIndex++;
         }
@@ -290,6 +373,7 @@ function loadStreamsConfig(streams) {
     
     // Load new configuration
     for (const stream of streams) {
+        // Add a small delay between starting streams to prevent the browser shitting it's pants
         setTimeout(() => {
             initializeStream(stream.index, stream.url, stream.name);
         }, streams.indexOf(stream) * 500);
@@ -326,7 +410,7 @@ function downloadConfig() {
 }
 
 function showNotification(message, isError = false) {
-    console.log(message);
+    console.log(message); 
 }
 
 async function loadPreset(presetName) {
