@@ -6,14 +6,17 @@
 #                                                                        #
 ##########################################################################
 #                                                                        #
-#                                v.2.1                                   #
+#                                v.2.2                                   #
 #                                                                        #
 ##########################################################################
+
 import os
-from flask import Flask, render_template, jsonify, request, send_file
+from flask import Flask, render_template, jsonify, request, send_file, Response
 from flask_sock import Sock
 import csv
 import socket
+import requests
+import re
 
 app = Flask(__name__)
 sock = Sock(app)
