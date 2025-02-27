@@ -16,9 +16,12 @@
             <div class="header-controls">
                 <div class="grid-controls">
                     <button class="layout-button active" onclick="setGridLayout(2)">2x2</button>
+                    <button class="layout-button" onclick="setGridLayout(3)">3x3</button>
                     <button class="layout-button" onclick="setGridLayout(4)">4x4</button>
-                </div>
-                <div class="preset-controls">
+                </div>               
+                 <div class="preset-controls">
+                    <button class="load-button" onclick="loadPreset('Streaming')">Streaming</button>
+                    <button class="load-button" onclick="loadPreset('Volant')">preset2</button>
                     <button class="load-button" onclick="loadPreset('news')">news</button>
                 </div>
                 <div class="file-controls">
@@ -60,6 +63,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <script src="{{ url_for('static', filename='multiview.js') }}"></script>
     <script>
         // Initialize the UI when the page loads
